@@ -24,9 +24,8 @@ async function login() {
     console.log(`✅ Logged in as ${user.UserName} (ID: ${user.UserID})`);
 
     // get group rank for permission checking
-    const role = await noblox.getRankInGroup(GROUP_ID, user.UserID);
-    myRoleRank = role;
-    console.log(`📊 Current rank in group: ${myRoleRank}`);
+    myRoleRank = await noblox.getRankInGroup(GROUP_ID, user.UserID);
+    console.log(`📊 My rank in group: ${myRoleRank}`);
   } catch (err) {
     console.error("❌ Login failed:", err);
   }
@@ -38,30 +37,39 @@ async function checkWall() {
     const wall = await noblox.getWall(GROUP_ID, "Desc"); // newest first
     if (!wall || !wall.data || wall.data.length === 0) return;
 
-    // process the 10 newest posts
     const postsToProcess = wall.data
-      .slice(0, 10)
+      .slice(0, 10) // check last 10 posts
       .filter(post => post?.id > lastProcessedId && post?.poster?.username)
       .sort((a, b) => a.id - b.id); // oldest first
 
     for (const post of postsToProcess) {
       const username = post.poster.username;
       const msg = post.body;
-      if (!msg) continue;
-      if (username.toLowerCase() !== OWNER_USERNAME.toLowerCase()) continue;
+      console.log(`👀 Found post #${post.id} from ${username}: "${msg}"`);
 
-      console.log(`📩 Command from ${username}: ${msg.trim()}`);
-      const args = msg.trim().split(" ");
+      lastProcessedId = Math.max(lastProcessedId, post.id);
+
+      if (username.toLowerCase() !== OWNER_USERNAME.toLowerCase()) {
+        console.log(`➡️ Skipping post: not from ${OWNER_USERNAME}`);
+        continue;
+      }
+
+      if (!msg) {
+        console.log("➡️ Skipping empty message");
+        continue;
+      }
+
+      const args = msg.trim().split(/\s+/); // handle extra spaces
       const cmd = args.shift().toLowerCase();
 
-      // --- HELPER FUNCTION ---
-      async function hasPermission(targetRank) {
+      // HELPER: check permission
+      async function canActOn(targetRank) {
         if (myRoleRank <= targetRank) {
+          console.log(`⚠️ Cannot act: my rank (${myRoleRank}) <= target rank (${targetRank})`);
           await noblox.postOnGroupWall(
             GROUP_ID,
-            `❌ Cannot execute command; your rank (${myRoleRank}) is too low.`
+            `❌ Cannot execute command; my rank (${myRoleRank}) <= target rank (${targetRank})`
           );
-          console.warn(`⚠️ Permission denied. My rank: ${myRoleRank}, target rank: ${targetRank}`);
           return false;
         }
         return true;
@@ -73,14 +81,14 @@ async function checkWall() {
         try {
           const id = await noblox.getIdFromUsername(target);
           const targetRank = await noblox.getRankInGroup(GROUP_ID, id);
-          if (!(await hasPermission(targetRank))) continue;
+          console.log(`Promote command: target ${target} (ID: ${id}, rank: ${targetRank})`);
+          if (!(await canActOn(targetRank))) continue;
 
-          console.log(`Attempting to promote ${target} (ID: ${id})`);
           await noblox.promote(GROUP_ID, id);
-          await noblox.postOnGroupWall(GROUP_ID, `✅ Successfully promoted ${target}`);
           console.log(`✅ Promoted ${target}`);
+          await noblox.postOnGroupWall(GROUP_ID, `✅ Successfully promoted ${target}`);
         } catch (e) {
-          console.error(`❌ Failed to promote ${target}:`, e.message || e);
+          console.error(`❌ Promote failed for ${target}:`, e.message || e);
           await noblox.postOnGroupWall(GROUP_ID, `❌ Failed to promote ${target}: ${e.message || e}`);
         }
       }
@@ -91,14 +99,14 @@ async function checkWall() {
         try {
           const id = await noblox.getIdFromUsername(target);
           const targetRank = await noblox.getRankInGroup(GROUP_ID, id);
-          if (!(await hasPermission(targetRank))) continue;
+          console.log(`Demote command: target ${target} (ID: ${id}, rank: ${targetRank})`);
+          if (!(await canActOn(targetRank))) continue;
 
-          console.log(`Attempting to demote ${target} (ID: ${id})`);
           await noblox.demote(GROUP_ID, id);
-          await noblox.postOnGroupWall(GROUP_ID, `✅ Successfully demoted ${target}`);
           console.log(`✅ Demoted ${target}`);
+          await noblox.postOnGroupWall(GROUP_ID, `✅ Successfully demoted ${target}`);
         } catch (e) {
-          console.error(`❌ Failed to demote ${target}:`, e.message || e);
+          console.error(`❌ Demote failed for ${target}:`, e.message || e);
           await noblox.postOnGroupWall(GROUP_ID, `❌ Failed to demote ${target}: ${e.message || e}`);
         }
       }
@@ -112,21 +120,22 @@ async function checkWall() {
           await noblox.postOnGroupWall(GROUP_ID, `❌ Invalid rank number: ${args[1]}`);
           continue;
         }
+
         try {
           const id = await noblox.getIdFromUsername(target);
-          if (!(await hasPermission(rank))) continue;
+          console.log(`SetRank command: target ${target} (ID: ${id}, new rank: ${rank})`);
+          if (!(await canActOn(rank))) continue;
 
-          console.log(`Attempting to set rank ${rank} for ${target} (ID: ${id})`);
           await noblox.setRank(GROUP_ID, id, rank);
+          console.log(`✅ Set rank of ${target} to ${rank}`);
           await noblox.postOnGroupWall(GROUP_ID, `✅ Successfully set ${target}'s rank to ${rank}`);
-          console.log(`✅ Set ${target}'s rank to ${rank}`);
         } catch (e) {
-          console.error(`❌ Failed to set rank for ${target}:`, e.message || e);
+          console.error(`❌ SetRank failed for ${target}:`, e.message || e);
           await noblox.postOnGroupWall(GROUP_ID, `❌ Failed to set rank for ${target}: ${e.message || e}`);
         }
+      } else {
+        console.log(`➡️ Unknown or invalid command: ${cmd}`);
       }
-
-      lastProcessedId = Math.max(lastProcessedId, post.id);
     }
 
   } catch (err) {
@@ -145,5 +154,5 @@ app.listen(PORT, async () => {
   console.log(`🌐 Running on port ${PORT}`);
   console.log("ROBLOX_COOKIE present?", !!process.env.ROBLOX_COOKIE);
   await login();
-  setInterval(checkWall, 10000); // check every 10 seconds.
+  setInterval(checkWall, 10000); // every 10 seconds.
 });
