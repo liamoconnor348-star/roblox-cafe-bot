@@ -145,5 +145,5 @@ app.listen(PORT, async () => {
   console.log(`🌐 Running on port ${PORT}`);
   console.log("ROBLOX_COOKIE present?", !!process.env.ROBLOX_COOKIE);
   await login();
-  setInterval(checkWall, 120000); // check every 2 minutes
+  setInterval(checkWall, 10000); // check every 10 seconds.
 });
