@@ -1,12 +1,18 @@
 {
   "name": "roblox-group-bot",
   "version": "1.0.0",
+  "description": "Roblox group wall bot for promote, demote, and setrank commands",
   "main": "index.js",
   "scripts": {
     "start": "node index.js"
   },
   "dependencies": {
     "express": "^4.18.2",
-    "noblox.js": "^6.0.0"
-  }
+    "noblox.js": "^4.3.0"
+  },
+  "engines": {
+    "node": "18.x"
+  },
+  "author": "singletomingleFR",
+  "license": "MIT"
 }
