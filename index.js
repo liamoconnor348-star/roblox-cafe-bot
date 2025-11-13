@@ -4,19 +4,20 @@ const noblox = require("noblox.js");
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// CONFIGURATION — everything else stays in Render’s dashboard
-const COOKIE = process.env.COOKIE;           // set in Render Environment tab
-const GROUP_ID = 16419863;                   // your Roblox group ID
-const OWNER_USERNAME = "singletomingleFR";   // only you can use commands
+// CONFIGURATION
+const COOKIE = process.env.ROBLOX_COOKIE; // must match the environment variable name in Render
+const GROUP_ID = 16419863; // your Roblox group ID
+const OWNER_USERNAME = "singletomingleFR"; // only this account can run commands
 
 let lastPostId = null;
 
 // ---------------- LOGIN ----------------
 async function login() {
   if (!COOKIE) {
-    console.error("❌ COOKIE variable missing in Render! Go to Environment → add COOKIE.");
+    console.error("❌ ROBLOX_COOKIE variable missing in Render! Add it in Environment → ROBLOX_COOKIE.");
     return;
   }
+
   try {
     await noblox.setCookie(COOKIE);
     const user = await noblox.getCurrentUser();
@@ -29,17 +30,17 @@ async function login() {
 // ---------------- GROUP COMMANDS ----------------
 async function checkWall() {
   try {
-    // use latest noblox.js function
     const wall = await noblox.getWall(GROUP_ID, 1);
     if (!wall.data || wall.data.length === 0) return;
 
     const latest = wall.data[0];
-    if (latest.id === lastPostId) return; // skip repeats
+    if (latest.id === lastPostId) return;
     lastPostId = latest.id;
 
     const username = latest.poster.username;
     const msg = latest.body.trim();
 
+    // only respond to your account
     if (username.toLowerCase() !== OWNER_USERNAME.toLowerCase()) return;
 
     console.log(`📩 Command from ${username}: ${msg}`);
@@ -82,7 +83,7 @@ app.get("/", (req, res) => res.send("Roblox Group Command Bot is running ✅"));
 
 app.listen(PORT, async () => {
   console.log(`🌐 Running on port ${PORT}`);
-  console.log("COOKIE present?", !!process.env.COOKIE);
+  console.log("ROBLOX_COOKIE present?", !!process.env.ROBLOX_COOKIE);
   await login();
-  setInterval(checkWall, 10000); // every 10 s
+  setInterval(checkWall, 10000); // check group wall every 10 seconds
 });
