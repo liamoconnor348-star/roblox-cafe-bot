@@ -4,14 +4,20 @@ const noblox = require("noblox.js");
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// CONFIG
+// 🔐 Configuration
 const COOKIE = process.env.COOKIE;
-const GROUP_ID = 16419863; // your group ID
+const GROUP_ID = 16419863; // your Roblox group ID
 const OWNER_USERNAME = "singletomingleFR";
 
 let lastPostId = null;
 
+// ---------------------- LOGIN ----------------------
 async function login() {
+  if (!COOKIE) {
+    console.error("❌ Missing COOKIE environment variable!");
+    return;
+  }
+
   try {
     await noblox.setCookie(COOKIE);
     const currentUser = await noblox.getCurrentUser();
@@ -21,10 +27,11 @@ async function login() {
   }
 }
 
+// ---------------------- COMMAND HANDLER ----------------------
 async function checkGroupWall() {
   try {
-    // 🆕 use getWall instead of getGroupWall
-    const wall = await noblox.getWall(GROUP_ID, 1); 
+    // 🆕 getWall replaces the old getGroupWall
+    const wall = await noblox.getWall(GROUP_ID, 1);
     if (!wall.data || wall.data.length === 0) return;
 
     const latest = wall.data[0];
@@ -34,7 +41,8 @@ async function checkGroupWall() {
     const username = latest.poster.username;
     const message = latest.body.trim();
 
-    if (username !== OWNER_USERNAME) return;
+    // only owner can run commands
+    if (username.toLowerCase() !== OWNER_USERNAME.toLowerCase()) return;
 
     console.log(`📩 Command from ${username}: ${message}`);
 
@@ -43,27 +51,31 @@ async function checkGroupWall() {
 
     if (command === "!promote" && args[0]) {
       const target = args[0];
-      const userId = await noblox.getIdFromUsername(target);
-      await noblox.promote(GROUP_ID, userId);
-      console.log(`✅ Promoted ${target}`);
+      const id = await noblox.getIdFromUsername(target);
+      await noblox.promote(GROUP_ID, id);
       await noblox.postOnGroupWall(GROUP_ID, `✅ Promoted ${target}`);
+      console.log(`✅ Promoted ${target}`);
     }
 
     else if (command === "!demote" && args[0]) {
       const target = args[0];
-      const userId = await noblox.getIdFromUsername(target);
-      await noblox.demote(GROUP_ID, userId);
-      console.log(`✅ Demoted ${target}`);
+      const id = await noblox.getIdFromUsername(target);
+      await noblox.demote(GROUP_ID, id);
       await noblox.postOnGroupWall(GROUP_ID, `✅ Demoted ${target}`);
+      console.log(`✅ Demoted ${target}`);
     }
 
     else if (command === "!setrank" && args[0] && args[1]) {
       const target = args[0];
       const rank = parseInt(args[1]);
-      const userId = await noblox.getIdFromUsername(target);
-      await noblox.setRank(GROUP_ID, userId, rank);
-      console.log(`✅ Set ${target}'s rank to ${rank}`);
+      if (isNaN(rank)) {
+        await noblox.postOnGroupWall(GROUP_ID, "⚠️ Invalid rank number!");
+        return;
+      }
+      const id = await noblox.getIdFromUsername(target);
+      await noblox.setRank(GROUP_ID, id, rank);
       await noblox.postOnGroupWall(GROUP_ID, `✅ Set ${target}'s rank to ${rank}`);
+      console.log(`✅ Set ${target}'s rank to ${rank}`);
     }
 
   } catch (err) {
@@ -71,10 +83,14 @@ async function checkGroupWall() {
   }
 }
 
-app.get("/", (req, res) => res.send("Roblox Group Command Bot is running ✅"));
+// ---------------------- EXPRESS SERVER ----------------------
+app.get("/", (req, res) => {
+  res.send("Roblox Group Command Bot is running ✅");
+});
 
 app.listen(PORT, async () => {
   console.log(`🌐 Server running on port ${PORT}`);
+  console.log("COOKIE present?", !!process.env.COOKIE); // shows if cookie exists
   await login();
   setInterval(checkGroupWall, 10000); // every 10 seconds
 });
