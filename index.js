@@ -5,9 +5,9 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 
 // CONFIGURATION
-const COOKIE = process.env.ROBLOX_COOKIE; // must match the environment variable in Render
-const GROUP_ID = 16419863; // your Roblox group ID
-const OWNER_USERNAME = "singletomingleFR"; // only this account can run commands
+const COOKIE = process.env.ROBLOX_COOKIE;
+const GROUP_ID = 16419863;
+const OWNER_USERNAME = "singletomingleFR";
 
 let lastPostId = null;
 
@@ -72,7 +72,12 @@ async function checkWall() {
     }
 
   } catch (err) {
-    console.error("⚠️ Error checking wall:", err);
+    if (err.message && err.message.includes("Too many requests")) {
+      console.warn("⚠️ Hit Roblox rate limit, waiting 2 minutes before retrying...");
+      lastPostId = null; // reset so the next check will attempt again
+    } else {
+      console.error("⚠️ Error checking wall:", err);
+    }
   }
 }
 
@@ -85,5 +90,5 @@ app.listen(PORT, async function() {
   console.log("🌐 Running on port " + PORT);
   console.log("ROBLOX_COOKIE present?", !!process.env.ROBLOX_COOKIE);
   await login();
-  setInterval(checkWall, 10000); // check group wall every 10 seconds
+  setInterval(checkWall, 120000); // check group wall every 2 minutes
 });
