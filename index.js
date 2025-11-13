@@ -5,7 +5,7 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 
 // ---------------- CONFIG ----------------
-const COOKIE = process.env.ROBLOX_COOKIE; // must match the environment variable in Render
+const COOKIE = process.env.ROBLOX_COOKIE; // environment variable in Render
 const GROUP_ID = 16419863;                 // your Roblox group ID
 const OWNER_USERNAME = "singletomingleFR"; // only this account can run commands
 
@@ -62,7 +62,7 @@ async function handleCommand(message) {
       console.log(`✅ Set ${target}'s rank to ${rank}`);
     }
   } catch (err) {
-    console.error("⚠️ Error executing command:", err); // only real errors
+    console.error("⚠️ Error executing command:", err);
   }
 }
 
@@ -70,25 +70,20 @@ async function handleCommand(message) {
 async function checkWall() {
   try {
     const wall = await noblox.getWall(GROUP_ID, 5); // last 5 posts
-    if (!wall.data || wall.data.length === 0) return; // silently skip empty walls
+    if (!wall.data || wall.data.length === 0) return;
 
     for (const post of wall.data.reverse()) {
-      // silently skip system/deleted posts
       if (!post.poster || !post.poster.username) continue;
-
-      // skip posts already handled
       if (post.id <= lastPostId) continue;
 
       lastPostId = post.id;
 
-      // skip posts not from OWNER_USERNAME
       if (post.poster.username.toLowerCase() !== OWNER_USERNAME.toLowerCase()) continue;
 
-      // handle command and log only this
       await handleCommand(post.body.trim());
     }
   } catch (err) {
-    console.error("⚠️ Error checking wall:", err); // only log actual errors
+    console.error("⚠️ Error checking wall:", err);
   }
 }
 
@@ -99,5 +94,5 @@ app.listen(PORT, async () => {
   console.log(`🌐 Running on port ${PORT}`);
   console.log("ROBLOX_COOKIE present?", !!process.env.ROBLOX_COOKIE);
   await login();
-  setInterval(checkWall, 2000); // near-instant new post detection
+  setInterval(checkWall, 2000); // near-instant detection
 });
