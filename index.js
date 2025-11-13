@@ -4,9 +4,9 @@ const noblox = require("noblox.js");
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Configuration
-const COOKIE = process.env.COOKIE; // from Render env var
-const GROUP_ID = 16419863; // your Roblox group ID
+// CONFIG
+const COOKIE = process.env.COOKIE;
+const GROUP_ID = 16419863; // your group ID
 const OWNER_USERNAME = "singletomingleFR";
 
 let lastPostId = null;
@@ -14,8 +14,8 @@ let lastPostId = null;
 async function login() {
   try {
     await noblox.setCookie(COOKIE);
-    const user = await noblox.getCurrentUser();
-    console.log(`✅ Logged in as ${user.UserName}`);
+    const currentUser = await noblox.getCurrentUser();
+    console.log(`✅ Logged in as ${currentUser.UserName}`);
   } catch (err) {
     console.error("❌ Login failed:", err);
   }
@@ -23,42 +23,46 @@ async function login() {
 
 async function checkGroupWall() {
   try {
-    const posts = await noblox.getGroupWall(GROUP_ID, 1);
-    if (!posts.length) return;
+    // 🆕 use getWall instead of getGroupWall
+    const wall = await noblox.getWall(GROUP_ID, 1); 
+    if (!wall.data || wall.data.length === 0) return;
 
-    const latest = posts[0];
+    const latest = wall.data[0];
     if (latest.id === lastPostId) return;
     lastPostId = latest.id;
 
     const username = latest.poster.username;
-    const msg = latest.body.trim();
+    const message = latest.body.trim();
 
     if (username !== OWNER_USERNAME) return;
 
-    console.log(`📩 Command from ${username}: ${msg}`);
+    console.log(`📩 Command from ${username}: ${message}`);
 
-    const args = msg.split(" ");
-    const cmd = args.shift().toLowerCase();
+    const args = message.split(" ");
+    const command = args.shift().toLowerCase();
 
-    if (cmd === "!promote" && args[0]) {
+    if (command === "!promote" && args[0]) {
       const target = args[0];
-      const id = await noblox.getIdFromUsername(target);
-      await noblox.promote(GROUP_ID, id);
+      const userId = await noblox.getIdFromUsername(target);
+      await noblox.promote(GROUP_ID, userId);
+      console.log(`✅ Promoted ${target}`);
       await noblox.postOnGroupWall(GROUP_ID, `✅ Promoted ${target}`);
     }
 
-    else if (cmd === "!demote" && args[0]) {
+    else if (command === "!demote" && args[0]) {
       const target = args[0];
-      const id = await noblox.getIdFromUsername(target);
-      await noblox.demote(GROUP_ID, id);
+      const userId = await noblox.getIdFromUsername(target);
+      await noblox.demote(GROUP_ID, userId);
+      console.log(`✅ Demoted ${target}`);
       await noblox.postOnGroupWall(GROUP_ID, `✅ Demoted ${target}`);
     }
 
-    else if (cmd === "!setrank" && args[0] && args[1]) {
+    else if (command === "!setrank" && args[0] && args[1]) {
       const target = args[0];
       const rank = parseInt(args[1]);
-      const id = await noblox.getIdFromUsername(target);
-      await noblox.setRank(GROUP_ID, id, rank);
+      const userId = await noblox.getIdFromUsername(target);
+      await noblox.setRank(GROUP_ID, userId, rank);
+      console.log(`✅ Set ${target}'s rank to ${rank}`);
       await noblox.postOnGroupWall(GROUP_ID, `✅ Set ${target}'s rank to ${rank}`);
     }
 
