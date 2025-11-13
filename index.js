@@ -9,7 +9,7 @@ const GROUP_ID = 16419863;
 const OWNER_USERNAME = "singletomingleFR";
 
 let lastProcessedId = 0;
-let myRoleRank = 0; // store singletomingleFR's rank in the group
+let myRoleRank = 0; // singletomingleFR's rank in the group
 
 // ---------------- LOGIN ----------------
 async function login() {
@@ -23,7 +23,7 @@ async function login() {
     const user = await noblox.getCurrentUser();
     console.log(`✅ Logged in as ${user.UserName} (ID: ${user.UserID})`);
 
-    // get group role for permission checking
+    // get group rank for permission checking
     const role = await noblox.getRankInGroup(GROUP_ID, user.UserID);
     myRoleRank = role;
     console.log(`📊 Current rank in group: ${myRoleRank}`);
@@ -35,12 +35,14 @@ async function login() {
 // ---------------- GROUP COMMANDS ----------------
 async function checkWall() {
   try {
-    const wall = await noblox.getWall(GROUP_ID, 10);
+    const wall = await noblox.getWall(GROUP_ID, "Desc"); // newest first
     if (!wall || !wall.data || wall.data.length === 0) return;
 
+    // process the 10 newest posts
     const postsToProcess = wall.data
+      .slice(0, 10)
       .filter(post => post?.id > lastProcessedId && post?.poster?.username)
-      .sort((a, b) => a.id - b.id);
+      .sort((a, b) => a.id - b.id); // oldest first
 
     for (const post of postsToProcess) {
       const username = post.poster.username;
@@ -143,5 +145,5 @@ app.listen(PORT, async () => {
   console.log(`🌐 Running on port ${PORT}`);
   console.log("ROBLOX_COOKIE present?", !!process.env.ROBLOX_COOKIE);
   await login();
-  setInterval(checkWall, 10000); // check every 10 seconds.
+  setInterval(checkWall, 120000); // check every 2 minutes
 });
