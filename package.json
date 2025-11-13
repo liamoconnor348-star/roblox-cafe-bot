@@ -11,7 +11,7 @@
     "noblox.js": "^4.3.0"
   },
   "engines": {
-    "node": "18.x"
+    "node": "20.x"
   },
   "author": "singletomingleFR",
   "license": "MIT"
