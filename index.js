@@ -5,7 +5,7 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 
 // ---------------- CONFIG ----------------
-const COOKIE = process.env.ROBLOX_COOKIE; // environment variable in Render
+const COOKIE = process.env.ROBLOX_COOKIE; // must match Render env
 const GROUP_ID = 16419863;                 // your Roblox group ID
 const OWNER_USERNAME = "singletomingleFR"; // only this account can run commands
 
@@ -94,5 +94,5 @@ app.listen(PORT, async () => {
   console.log(`🌐 Running on port ${PORT}`);
   console.log("ROBLOX_COOKIE present?", !!process.env.ROBLOX_COOKIE);
   await login();
-  setInterval(checkWall, 2000); // near-instant detection
+  setInterval(checkWall, 2000);
 });
